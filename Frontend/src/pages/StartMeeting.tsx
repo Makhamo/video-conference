@@ -14,6 +14,8 @@ const StartMeeting: React.FC = () => {
   const [participants, setParticipants] = useState<string[]>([]); 
   const [showParticipants, setShowParticipants] = useState<boolean>(false);
   const [showChatButton, setShowChatButton] = useState<boolean>(false);
+  const [email, setEmail] = useState<string>(''); 
+  const [password, setPassword] = useState<string>(''); 
 
   const navigate = useNavigate(); 
 
@@ -42,16 +44,42 @@ const StartMeeting: React.FC = () => {
     };
   }, []);
 
-  const joinRoom = () => {
-    if (roomId && userName) {
-      socket.emit('message', {
-        type: 'join',
-        room: roomId,
-        userId: userName,
-      });
-      
-      setShowParticipants(true);
-      setShowChatButton(true);
+  // Login and join room function
+  const joinRoom = async () => {
+    if (socket && roomId && userName && email && password) {
+      // First, validate email and password
+      try {
+        const response = await fetch('http://localhost:5000/api/userAuth/login', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify({ email, password }),
+        });
+
+        const data = await response.json();
+
+        if (data.success) {
+          // If login is successful, join the room
+          socket.send(
+            JSON.stringify({
+              type: 'join',
+              room: roomId,
+              userId: userName,
+              email,
+            })
+          );
+
+          // Show the participants section and chat button
+          setShowParticipants(true);
+          setShowChatButton(true);
+        } else {
+          alert(data.message); // Show an error message if login fails
+        }
+      } catch (error) {
+        console.error('Error logging in:', error);
+        alert('An error occurred while logging in.');
+      }
     }
   };
 
@@ -83,6 +111,26 @@ const StartMeeting: React.FC = () => {
           />
         </div>
 
+        <div className="flex flex-col mb-4">
+          <label className="text-sm mb-2">Enter Your Email:</label>
+          <input
+            type="email"
+            value={email}
+            onChange={(e) => setEmail(e.target.value)}
+            className="p-2 rounded bg-gray-700 border-none focus:ring-2 focus:ring-blue-500 text-white"
+          />
+        </div>
+
+        <div className="flex flex-col mb-4">
+          <label className="text-sm mb-2">Enter Your Password:</label>
+          <input
+            type="password"
+            value={password}
+            onChange={(e) => setPassword(e.target.value)}
+            className="p-2 rounded bg-gray-700 border-none focus:ring-2 focus:ring-blue-500 text-white"
+          />
+        </div>
+
         <button
           onClick={joinRoom}
           className="w-full bg-blue-600 hover:bg-blue-700 text-white font-bold py-2 rounded transition duration-300"
@@ -107,13 +155,13 @@ const StartMeeting: React.FC = () => {
           </ul>
         </div>
       )}
-{/**Join the Video Conference */}
+
       {showChatButton && (
         <button
           onClick={goToChat}
           className="mt-4 w-80 bg-green-600 hover:bg-green-700 text-white font-bold py-2 rounded transition duration-300"
         >
-          Video Call
+          Go to Chat
         </button>
       )}
     </div>

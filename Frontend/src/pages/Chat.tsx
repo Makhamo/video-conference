@@ -11,6 +11,11 @@ import { FaPaperclip } from 'react-icons/fa';
 
 
 declare global {
+
+  interface SpeechRecognitionEvent extends Event {
+    results: SpeechRecognitionResultList;
+    resultIndex: number;
+  }
   interface Window {
     SpeechRecognition: any;
     webkitSpeechRecognition: any;
