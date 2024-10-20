@@ -107,7 +107,7 @@ const StartMeeting: React.FC = () => {
           </ul>
         </div>
       )}
-
+{/**Join the Video Conference */}
       {showChatButton && (
         <button
           onClick={goToChat}
