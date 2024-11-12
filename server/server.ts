@@ -67,6 +67,30 @@ io.on('connection', (socket) => {
     socket.broadcast.emit('candidate', data);
   });
 
+  io.on("connection", (socket) => {
+    socket.on("send-offer", (data) => {
+      io.to(data.to).emit("receive-offer", {
+        offer: data.offer,
+        from: socket.id,
+      });
+    });
+  
+    socket.on("send-answer", (data) => {
+      io.to(data.to).emit("receive-answer", {
+        answer: data.answer,
+        from: socket.id,
+      });
+    });
+  
+    socket.on("new-ice-candidate", (data) => {
+      io.to(data.to).emit("new-ice-candidate", {
+        candidate: data.candidate,
+        from: socket.id,
+      });
+    });
+  });
+  
+
   // Handle incoming messages
   socket.on('message', (data) => {
     const { roomId } = data;

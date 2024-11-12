@@ -1,12 +1,11 @@
 import React, { useEffect, useRef, useState } from 'react';
-import socket from '../socket'; // Ensure socket.io client setup
+import { io } from 'socket.io-client';
 import { useLocation, useNavigate } from 'react-router-dom';
-import TopMenu from '../components/TopMenu';
 import { FaVideo, FaVideoSlash, FaShareSquare } from 'react-icons/fa';
 import { VscUnmute } from 'react-icons/vsc';
 import { MdCallEnd } from 'react-icons/md';
 import { IoIosRecording } from 'react-icons/io';
-import { FaUsers, FaComments } from 'react-icons/fa';
+import { FaComments } from 'react-icons/fa';
 import { IoHandRight } from 'react-icons/io5';
 import { FcLikePlaceholder } from 'react-icons/fc';
 
@@ -16,168 +15,49 @@ const iceServersConfig = {
   ],
 };
 
-const Chat = () => {
+const Multi = () => {
   const location = useLocation(); 
   const { roomId, userName } = location.state || {};
   const navigate = useNavigate();
-  
-  // State for local and remote streams
-  const [localStream, setLocalStream] = useState(null);
-  const [remoteStreams, setRemoteStreams] = useState({});
-  const [peerConnections, setPeerConnections] = useState({});
+  const socket = io('http://localhost:3011');
 
-  const localVideoRef = useRef(null);
-
-  useEffect(() => {
-    navigator.mediaDevices.getUserMedia({ video: true, audio: true })
-      .then((stream) => {
-        setLocalStream(stream);
-        if (localVideoRef.current) {
-          localVideoRef.current.srcObject = stream;
-        }
-        socket.emit('join-room', { roomId, userName });
-      })
-      .catch(console.error);
-  }, []);
-  
-  useEffect(() => {
-    socket.on('user-joined', handleUserJoined);
-    socket.on('offer', handleOffer);
-    socket.on('answer', handleAnswer);
-    socket.on('ice-candidate', handleICECandidate);
-  
-    return () => {
-      socket.off('user-joined', handleUserJoined);
-      socket.off('offer', handleOffer);
-      socket.off('answer', handleAnswer);
-      socket.off('ice-candidate', handleICECandidate);
-    };
-  }, [peerConnections, localStream]);
-  
-  const handleUserJoined = ({ userId }) => {
-    if (peerConnections[userId]) return;
-  
-    const peerConnection = new RTCPeerConnection(iceServersConfig);
-    localStream.getTracks().forEach(track => peerConnection.addTrack(track, localStream));
-  
-    peerConnection.onicecandidate = event => {
-      if (event.candidate) {
-        socket.emit('ice-candidate', { to: userId, candidate: event.candidate });
-      }
-    };
-  
-    peerConnection.ontrack = event => {
-      console.log('Received remote stream from', userId);
-      setRemoteStreams((prev) => ({ ...prev, [userId]: event.streams[0] }));
-    };
-  
-    peerConnection.onnegotiationneeded = async () => {
-      try {
-        const offer = await peerConnection.createOffer();
-        await peerConnection.setLocalDescription(offer);
-        socket.emit('offer', { to: userId, offer });
-      } catch (error) {
-        console.error('Error during negotiation:', error);
-      }
-    };
-  
-    setPeerConnections((prev) => ({ ...prev, [userId]: peerConnection }));
-  };
-  
-  
-  
-  
-
-  const handleOffer = async ({ from, offer }) => {
-    const peerConnection = new RTCPeerConnection(iceServersConfig);
-    localStream.getTracks().forEach(track => peerConnection.addTrack(track, localStream));
-
-    peerConnection.onicecandidate = event => {
-      if (event.candidate) {
-        socket.emit('ice-candidate', { to: from, candidate: event.candidate });
-      }
-    };
-
-    peerConnection.ontrack = event => {
-      setRemoteStreams((prev) => ({ ...prev, [from]: event.streams[0] }));
-    };
-
-    await peerConnection.setRemoteDescription(new RTCSessionDescription(offer));
-    const answer = await peerConnection.createAnswer();
-    await peerConnection.setLocalDescription(answer);
-    socket.emit('answer', { to: from, answer });
-
-    setPeerConnections((prev) => ({ ...prev, [from]: peerConnection }));
-  };
-
-  const handleAnswer = async ({ from, answer }) => {
-    const peerConnection = peerConnections[from];
-    if (peerConnection) {
-      await peerConnection.setRemoteDescription(new RTCSessionDescription(answer));
-    }
-  };
-
-  const handleICECandidate = ({ from, candidate }) => {
-    const peerConnection = peerConnections[from];
-    if (peerConnection) {
-      peerConnection.addIceCandidate(new RTCIceCandidate(candidate)).catch(console.error);
-    }
-  };
-
-  const endCall = () => {
-    Object.keys(peerConnections).forEach(userId => {
-      peerConnections[userId].close(); // Close each peer connection
-      delete peerConnections[userId];
-    });
-    setPeerConnections({});
-    setRemoteStreams({});
-    if (localStream) {
-      localStream.getTracks().forEach(track => track.stop());
-    }
-    navigate('/');
-  };
-  useEffect(() => {
-    socket.on('user-left', ({ userId }) => {
-      if (peerConnections[userId]) {
-        peerConnections[userId].close();
-        setPeerConnections(prev => {
-          const updated = { ...prev };
-          delete updated[userId];
-          return updated;
-        });
-        setRemoteStreams(prev => {
-          const updated = { ...prev };
-          delete updated[userId];
-          return updated;
-        });
-      }
-    });
-  
-    return () => {
-      socket.off('user-left');
-    };
-  }, [peerConnections]);
-  
-  
-
-  // Function to format the call duration into minutes and seconds
-  const formatDuration = (duration) => {
-    const minutes = Math.floor(duration / 60);
-    const seconds = duration % 60;
-    return `${minutes}:${seconds < 10 ? '0' : ''}${seconds}`;
-  };
 
   return (
     <div className="flex flex-col h-screen w-full border p-1 bg-gray-900 rounded-md overflow-hidden">
-      <TopMenu
-        isCallActive={!!localStream}
-        startCall={() => {}}
-        endCall={endCall}
-        isViewing={false}
-        toggleViewing={() => {}}
-        callDuration={0}
-        formatDuration={formatDuration}
-      />
+      <div className="flex flex-wrap  items-center justify-between p-3 bg-gradient-to-r from-gray-700 via-gray-800 to-gray-900 rounded-t-lg shadow-xl text-gray-200 space-x-2 transition duration-300">
+      
+
+      {/* Call Control Buttons */}
+      <div className="flex space-x-2">
+        {!isCallActive ? (
+          <button
+            onClick={startCall}
+            className="flex items-center px-4 py-2 rounded-lg bg-blue-600 text-white hover:bg-blue-700 active:scale-95 transform transition-all duration-200 focus:outline-none focus:ring-2 focus:ring-blue-500 shadow-md"
+            aria-label="Start Call"
+          >
+            <FaVideo className="mr-2 text-lg" />
+            <span className="hidden md:inline text-sm font-semibold">Start Call</span>
+          </button>
+        ) : (
+          <button
+            onClick={endCall}
+            className="flex items-center px-4 py-2 rounded-lg bg-red-600 text-white hover:bg-red-700 active:scale-95 transform transition-all duration-200 focus:outline-none focus:ring-2 focus:ring-red-500 shadow-md"
+            aria-label="Leave Meeting"
+          >
+            <FaVideoSlash className="mr-2 text-lg" />
+            <span className="hidden md:inline text-sm font-semibold">Leave Meeting</span>
+          </button>
+        )}
+      </div>
+
+      {/* Call Duration Display */}
+      {isCallActive && (
+        <div className="flex items-center mt-2 md:mt-0 text-lg font-semibold text-blue-200">
+          <span className="mr-2">Call Duration:</span>
+          <span className="bg-gray-700 px-3 py-1 rounded-md">{formatDuration(callDuration)}</span>
+        </div>
+      )}
+    </div>
       <div className="flex flex-col h-full">
         <div className="flex flex-row h-full bg-gray-900 space-x-1">
           <div className="relative w-full bg-gray-800 rounded-md overflow-hidden shadow-lg justify-center flex flex-col items-center">
@@ -308,4 +188,4 @@ const Chat = () => {
   );
 };
 
-export default Chat;
+export default Multi;
