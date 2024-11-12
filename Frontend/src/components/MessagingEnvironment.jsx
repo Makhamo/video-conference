@@ -107,9 +107,9 @@ const MessagingEnvironment = ({ userName, roomId, onClose }) => {
   }, []);
 
   return (
-    <div className="relative w-full h-full bg-gray-200 rounded-md p-2 flex flex-col">
+    <div className="relative w-full h-full bg-gray-200 p-2 flex flex-col">
       {/* Header */}
-      <div className="flex justify-between items-center mb-4">
+      <div className="flex justify-between items-center mb-2">
         <h2 className="text-lg font-semibold">Chat Room</h2>
         <button
           aria-label="Close messaging environment"

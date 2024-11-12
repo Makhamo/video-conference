@@ -404,7 +404,9 @@ const formatDuration = (duration) => {
 
 
   return (
-    <div className="flex flex-col h-screen w-full border p-1 bg-gray-900 rounded-md overflow-hidden">
+    <section className='flex bg-gray-900  overflow-hidden'>
+
+      <div className="flex flex-col h-screen w-full p-1 bg-gray-900 overflow-hidden">
       {/* Top Menu Section */}
       
       <div className="chat-container">
@@ -563,8 +565,14 @@ const formatDuration = (duration) => {
     </div>
   </div>
 </div>
+
+
           {/* Right Panel */}
-          <div className="w-1/3 flex flex-col space-y-2">
+         
+        </div>
+      </div>
+    </div>
+    <div className="w-1/3 flex flex-col space-y-2">
             {isViewing ? (
               <>
                 {/* Participants Section */}
@@ -593,9 +601,8 @@ const formatDuration = (duration) => {
               handleDoubleTap={handleDoubleTap}/>
    )}
           </div>
-        </div>
-      </div>
-    </div>
+    </section>
+    
   );
   
   
